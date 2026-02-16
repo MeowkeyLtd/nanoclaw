@@ -18,6 +18,9 @@ groups/global/*
 !groups/main/CLAUDE.md
 !groups/global/CLAUDE.md
 
+# Per-deployment customizations
+deployment/
+
 # Secrets
 *.keys.json
 .env

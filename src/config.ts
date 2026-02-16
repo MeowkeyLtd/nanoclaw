@@ -1,4 +1,80 @@
+import { execSync } from 'child_process';
 import path from 'path';
+
+// --- Container runtime detection ---
+
+export type ContainerRuntime = {
+  name: 'container' | 'podman' | 'docker';
+  bin: string;
+  /** Extra args prepended to every `run` command */
+  runArgs: string[];
+  /** Command to check availability */
+  checkCmd: string;
+  /** Command to list running containers (returns JSON) */
+  listCmd: string;
+  /** Parse nanoclaw container names from list JSON */
+  parseOrphans: (json: string) => string[];
+};
+
+const RUNTIMES: ContainerRuntime[] = [
+  {
+    name: 'container',
+    bin: 'container',
+    runArgs: [],
+    checkCmd: 'container system start',
+    listCmd: 'container ls --format json',
+    parseOrphans: (json: string) => {
+      const containers: { configuration?: { id?: string } }[] = JSON.parse(json || '[]');
+      return containers
+        .map((c) => c.configuration?.id || '')
+        .filter((id) => id.startsWith('nanoclaw-'));
+    },
+  },
+  {
+    name: 'podman',
+    bin: 'podman',
+    runArgs: ['--userns=keep-id', '--security-opt', 'label=disable'],
+    checkCmd: 'podman info',
+    listCmd: 'podman ps --format json',
+    parseOrphans: (json: string) => {
+      const containers: { Names?: string[] }[] = JSON.parse(json || '[]');
+      return containers
+        .flatMap((c) => c.Names || [])
+        .filter((n) => n.startsWith('nanoclaw-'));
+    },
+  },
+  {
+    name: 'docker',
+    bin: 'docker',
+    runArgs: [],
+    checkCmd: 'docker info',
+    listCmd: 'docker ps --format json',
+    parseOrphans: (json: string) => {
+      // docker ps --format json outputs one JSON object per line (not an array)
+      const lines = json.trim().split('\n').filter(Boolean);
+      const containers: { Names?: string }[] = lines.map((l) => JSON.parse(l));
+      return containers
+        .map((c) => c.Names || '')
+        .filter((n) => n.startsWith('nanoclaw-'));
+    },
+  },
+];
+
+function detectContainerRuntime(): ContainerRuntime {
+  for (const runtime of RUNTIMES) {
+    try {
+      execSync(`which ${runtime.bin}`, { stdio: 'pipe', timeout: 5000 });
+      return runtime;
+    } catch {
+      // not available, try next
+    }
+  }
+  throw new Error(
+    'No container runtime found. Install one of: Apple Container (macOS), Podman, or Docker.',
+  );
+}
+
+export const CONTAINER_RUNTIME = detectContainerRuntime();
 
 export const ASSISTANT_NAME = process.env.ASSISTANT_NAME || 'Andy';
 export const POLL_INTERVAL = 2000;
@@ -18,6 +94,8 @@ export const MOUNT_ALLOWLIST_PATH = path.join(
 export const STORE_DIR = path.resolve(PROJECT_ROOT, 'store');
 export const GROUPS_DIR = path.resolve(PROJECT_ROOT, 'groups');
 export const DATA_DIR = path.resolve(PROJECT_ROOT, 'data');
+export const DEPLOYMENT_NAME = process.env.DEPLOYMENT_NAME || 'default';
+export const DEPLOYMENT_DIR = path.resolve(PROJECT_ROOT, 'deployment', DEPLOYMENT_NAME);
 export const MAIN_GROUP_FOLDER = 'main';
 
 export const CONTAINER_IMAGE =

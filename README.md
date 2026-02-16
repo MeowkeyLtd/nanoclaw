@@ -33,7 +33,7 @@ Then run `/setup`. Claude Code handles everything: dependencies, authentication,
 
 **Small enough to understand.** One process, a few source files. No microservices, no message queues, no abstraction layers. Have Claude Code walk you through it.
 
-**Secure by isolation.** Agents run in Linux containers (Apple Container on macOS, or Docker). They can only see what's explicitly mounted. Bash access is safe because commands run inside the container, not on your host.
+**Secure by isolation.** Agents run in Linux containers (Apple Container, Podman, or Docker). They can only see what's explicitly mounted. Bash access is safe because commands run inside the container, not on your host.
 
 **Built for one user.** This isn't a framework. It's working software that fits my exact needs. You fork it and have Claude Code make it match your exact needs.
 
@@ -52,7 +52,7 @@ Then run `/setup`. Claude Code handles everything: dependencies, authentication,
 - **Main channel** - Your private channel (self-chat) for admin control; every other group is completely isolated
 - **Scheduled tasks** - Recurring jobs that run Claude and can message you back
 - **Web access** - Search and fetch content
-- **Container isolation** - Agents sandboxed in Apple Container (macOS) or Docker (macOS/Linux)
+- **Container isolation** - Agents sandboxed in Apple Container (macOS), Podman, or Docker
 - **Agent Swarms** - Spin up teams of specialized agents that collaborate on complex tasks (first personal AI assistant to support this)
 - **Optional integrations** - Add Gmail (`/add-gmail`) and more via skills
 
@@ -111,10 +111,21 @@ Skills we'd love to see:
 
 ## Requirements
 
-- macOS or Linux
-- Node.js 20+
+- macOS, Linux, or Windows (via WSL2)
+- [Bun](https://bun.sh) or Node.js 20+
 - [Claude Code](https://claude.ai/download)
-- [Apple Container](https://github.com/apple/container) (macOS) or [Docker](https://docker.com/products/docker-desktop) (macOS/Linux)
+- A container runtime: [Apple Container](https://github.com/apple/container) (macOS), [Podman](https://podman.io), or [Docker](https://docker.com/products/docker-desktop)
+
+### Windows (WSL2)
+
+NanoClaw runs natively inside WSL2 — no Windows-specific code needed.
+
+1. [Enable WSL2](https://learn.microsoft.com/en-us/windows/wsl/install) and install Ubuntu 22.04+
+2. Inside WSL2, install Podman (`sudo apt install podman`) or use Docker Desktop's WSL2 backend
+3. Install Bun: `curl -fsSL https://bun.sh/install | bash`
+4. Clone and run `/setup` as normal
+
+> **Note:** WSL2 distros with systemd enabled (Ubuntu 22.04+ default) work best with rootless Podman. If your distro doesn't have systemd, Docker Desktop's WSL2 backend is the easier path.
 
 ## Architecture
 
@@ -143,11 +154,11 @@ Because I use WhatsApp. Fork it and run a skill to change it. That's the whole p
 
 **Why Apple Container instead of Docker?**
 
-On macOS, Apple Container is lightweight, fast, and optimized for Apple silicon. But Docker is also fully supported—during `/setup`, you can choose which runtime to use. On Linux, Docker is used automatically.
+On macOS, Apple Container is lightweight, fast, and optimized for Apple silicon. But Docker and Podman are also fully supported — NanoClaw auto-detects whichever runtime is installed (Apple Container → Podman → Docker).
 
-**Can I run this on Linux?**
+**Can I run this on Linux or Windows?**
 
-Yes. Run `/setup` and it will automatically configure Docker as the container runtime. Thanks to [@dotsetgreg](https://github.com/dotsetgreg) for contributing the `/convert-to-docker` skill.
+Yes. On Linux, install Podman or Docker and run `/setup`. On Windows, use WSL2 (see [Requirements](#windows-wsl2) above).
 
 **Is this secure?**
 

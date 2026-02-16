@@ -1,6 +1,6 @@
 /**
  * Container Runner for NanoClaw
- * Spawns agent execution in Apple Container and handles IPC
+ * Spawns agent execution in a container and handles IPC
  */
 import { ChildProcess, exec, spawn } from 'child_process';
 import fs from 'fs';
@@ -10,8 +10,10 @@ import path from 'path';
 import {
   CONTAINER_IMAGE,
   CONTAINER_MAX_OUTPUT_SIZE,
+  CONTAINER_RUNTIME,
   CONTAINER_TIMEOUT,
   DATA_DIR,
+  DEPLOYMENT_DIR,
   GROUPS_DIR,
   IDLE_TIMEOUT,
 } from './config.js';
@@ -142,7 +144,7 @@ function buildVolumeMounts(
   }
   mounts.push({
     hostPath: groupSessionsDir,
-    containerPath: '/home/node/.claude',
+    containerPath: '/nanoclaw-home/.claude',
     readonly: false,
   });
 
@@ -166,6 +168,16 @@ function buildVolumeMounts(
     containerPath: '/app/src',
     readonly: true,
   });
+
+  // Per-deployment overrides (gitignored, personal customizations)
+  const deployGroupDir = path.join(DEPLOYMENT_DIR, 'groups', group.folder);
+  if (fs.existsSync(deployGroupDir)) {
+    mounts.push({
+      hostPath: deployGroupDir,
+      containerPath: '/workspace/deployment',
+      readonly: true,
+    });
+  }
 
   // Additional mounts validated against external allowlist (tamper-proof from containers)
   if (group.containerConfig?.additionalMounts) {
@@ -213,9 +225,9 @@ function readSecrets(): Record<string, string> {
 }
 
 function buildContainerArgs(mounts: VolumeMount[], containerName: string): string[] {
-  const args: string[] = ['run', '-i', '--rm', '--name', containerName];
+  const args: string[] = ['run', '-i', '--rm', ...CONTAINER_RUNTIME.runArgs, '--name', containerName];
 
-  // Apple Container: --mount for readonly, -v for read-write
+  // --mount for readonly, -v for read-write
   for (const mount of mounts) {
     if (mount.readonly) {
       args.push(
@@ -275,7 +287,7 @@ export async function runContainerAgent(
   fs.mkdirSync(logsDir, { recursive: true });
 
   return new Promise((resolve) => {
-    const container = spawn('container', containerArgs, {
+    const container = spawn(CONTAINER_RUNTIME.bin, containerArgs, {
       stdio: ['pipe', 'pipe', 'pipe'],
     });
 
@@ -382,7 +394,7 @@ export async function runContainerAgent(
     const killOnTimeout = () => {
       timedOut = true;
       logger.error({ group: group.name, containerName }, 'Container timeout, stopping gracefully');
-      exec(`container stop ${containerName}`, { timeout: 15000 }, (err) => {
+      exec(`${CONTAINER_RUNTIME.bin} stop ${containerName}`, { timeout: 15000 }, (err) => {
         if (err) {
           logger.warn({ group: group.name, containerName, err }, 'Graceful stop failed, force killing');
           container.kill('SIGKILL');
