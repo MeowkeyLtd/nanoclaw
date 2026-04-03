@@ -25,11 +25,11 @@ echo "Building NanoClaw agent container image..."
 echo "Runtime: ${RUNTIME}"
 echo "Image: ${IMAGE_NAME}:${TAG}"
 
-$RUNTIME build -t "${IMAGE_NAME}:${TAG}" .
+${RUNTIME} build -t "${IMAGE_NAME}:${TAG}" .
 
 echo ""
 echo "Build complete!"
 echo "Image: ${IMAGE_NAME}:${TAG}"
 echo ""
 echo "Test with:"
-echo "  echo '{\"prompt\":\"What is 2+2?\",\"groupFolder\":\"test\",\"chatJid\":\"test@g.us\",\"isMain\":false}' | $RUNTIME run -i ${IMAGE_NAME}:${TAG}"
+echo "  echo '{\"prompt\":\"What is 2+2?\",\"groupFolder\":\"test\",\"chatJid\":\"test@g.us\",\"isMain\":false}' | ${RUNTIME} run -i ${IMAGE_NAME}:${TAG}"

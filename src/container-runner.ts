@@ -148,6 +148,17 @@ function buildVolumeMounts(
     readonly: false,
   });
 
+  // Per-group Cursor sessions directory (for AGENT_BACKEND=cursor)
+  if (process.env.AGENT_BACKEND === 'cursor') {
+    const groupCursorDir = path.join(DATA_DIR, 'sessions', group.folder, '.cursor');
+    fs.mkdirSync(groupCursorDir, { recursive: true });
+    mounts.push({
+      hostPath: groupCursorDir,
+      containerPath: '/nanoclaw-home/.cursor',
+      readonly: false,
+    });
+  }
+
   // Per-group IPC namespace: each group gets its own IPC directory
   // This prevents cross-group privilege escalation via IPC
   const groupIpcDir = path.join(DATA_DIR, 'ipc', group.folder);
@@ -200,7 +211,7 @@ function readSecrets(): Record<string, string> {
   const envFile = path.join(process.cwd(), '.env');
   if (!fs.existsSync(envFile)) return {};
 
-  const allowedVars = ['CLAUDE_CODE_OAUTH_TOKEN', 'ANTHROPIC_API_KEY'];
+  const allowedVars = ['CLAUDE_CODE_OAUTH_TOKEN', 'ANTHROPIC_API_KEY', 'CURSOR_API_KEY'];
   const secrets: Record<string, string> = {};
   const content = fs.readFileSync(envFile, 'utf-8');
 
@@ -226,6 +237,14 @@ function readSecrets(): Record<string, string> {
 
 function buildContainerArgs(mounts: VolumeMount[], containerName: string): string[] {
   const args: string[] = ['run', '-i', '--rm', ...CONTAINER_RUNTIME.runArgs, '--name', containerName];
+
+  // Pass agent backend selection and cursor model if configured
+  if (process.env.AGENT_BACKEND) {
+    args.push('-e', `AGENT_BACKEND=${process.env.AGENT_BACKEND}`);
+  }
+  if (process.env.CURSOR_MODEL) {
+    args.push('-e', `CURSOR_MODEL=${process.env.CURSOR_MODEL}`);
+  }
 
   // --mount for readonly, -v for read-write
   for (const mount of mounts) {

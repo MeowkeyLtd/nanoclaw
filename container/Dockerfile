@@ -37,6 +37,12 @@ RUN chmod -R a+rX /opt/bun-global
 # Claude Code CLI has #!/usr/bin/env node shebang — symlink bun as node
 RUN ln -s /usr/local/bin/bun /usr/local/bin/node
 
+# Install Cursor CLI (optional agent backend)
+# Installer puts files in /root/.local — make accessible to all users
+RUN curl https://cursor.com/install -fsS | bash || true
+RUN chmod a+rx /root && chmod -R a+rX /root/.local 2>/dev/null || true
+RUN ln -sf /root/.local/bin/agent /usr/local/bin/agent 2>/dev/null || true
+
 # Create app directory
 WORKDIR /app
 
@@ -59,7 +65,7 @@ ENV HOME=/nanoclaw-home
 # Bun runs TypeScript directly — no compile step needed
 # Secrets are passed via stdin JSON — temp file is deleted immediately after Bun reads it
 # Follow-up messages arrive via IPC files in /workspace/ipc/input/
-RUN printf '#!/bin/bash\nset -e\ncat > /tmp/input.json\nbun run /app/src/index.ts < /tmp/input.json\n' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+RUN printf '#!/bin/bash\nset -e\ncat > /tmp/input.json\ncd /workspace/group\nif [ "${AGENT_BACKEND}" = "cursor" ]; then\n  bun run /app/src/cursor-runner.ts < /tmp/input.json\nelse\n  bun run /app/src/index.ts < /tmp/input.json\nfi\n' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
 # Set working directory to group workspace
 WORKDIR /workspace/group

@@ -1,0 +1,23 @@
+#!/bin/bash
+# Mock Cursor agent binary for offline testing
+# Emits a minimal stream-json session and exits
+# Logs received args to stderr for test inspection
+
+echo "mock-agent args: $@" >&2
+
+# Use a stable session ID based on invocation count (tracked via temp file)
+COUNTER_FILE="/tmp/mock-agent-counter"
+if [ -f "$COUNTER_FILE" ]; then
+  COUNT=$(cat "$COUNTER_FILE")
+  COUNT=$((COUNT + 1))
+else
+  COUNT=1
+fi
+echo "$COUNT" > "$COUNTER_FILE"
+
+SESSION_ID="mock-session-$COUNT"
+
+echo '{"type":"system","subtype":"init","session_id":"'"$SESSION_ID"'","model":"mock"}'
+echo '{"type":"user","message":{"role":"user","content":[{"type":"text","text":"test"}]},"session_id":"'"$SESSION_ID"'"}'
+echo '{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Response '"$COUNT"' from mock cursor agent"}]},"session_id":"'"$SESSION_ID"'"}'
+echo '{"type":"result","subtype":"success","duration_ms":100,"is_error":false,"result":"Response '"$COUNT"' from mock cursor agent","session_id":"'"$SESSION_ID"'"}'

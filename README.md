@@ -53,6 +53,7 @@ Then run `/setup`. Claude Code handles everything: dependencies, authentication,
 - **Scheduled tasks** - Recurring jobs that run Claude and can message you back
 - **Web access** - Search and fetch content
 - **Container isolation** - Agents sandboxed in Apple Container (macOS), Podman, or Docker
+- **Alternative agent backends** - Optional [Cursor CLI](docs/CURSOR-INTEGRATION.md) support for access to GPT-4o, GPT-5, Gemini, and other models
 - **Agent Swarms** - Spin up teams of specialized agents that collaborate on complex tasks (first personal AI assistant to support this)
 - **Optional integrations** - Add Gmail (`/add-gmail`) and more via skills
 
